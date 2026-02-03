@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slide Error Analyzer - Phân Tích Lỗi Slide</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🔍 Slide Error Analyzer</h1>
+            <p>Phân tích lỗi và thống kê cho các slide HTML</p>
+        </header>
+
+        <!-- Upload Section -->
+        <section class="upload-section" id="uploadSection">
+            <div class="upload-box">
+                <div class="upload-icon">📁</div>
+                <h2>Import Slides</h2>
+                <p>Chọn folder chứa slides (cấu trúc: slide_01/input.html + output.html) hoặc file ZIP</p>
+                
+                <div class="upload-buttons">
+                    <label for="folderInput" class="btn btn-primary">
+                        📂 Chọn Folder
+                        <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;">
+                    </label>
+                    
+                    <label for="zipInput" class="btn btn-secondary">
+                        📦 Chọn ZIP
+                        <input type="file" id="zipInput" accept=".zip" style="display: none;">
+                    </label>
+                </div>
+
+                <div class="file-info" id="fileInfo" style="display: none;">
+                    <p id="fileCount"></p>
+                    <div class="structure-preview" id="structurePreview"></div>
+                    <button class="btn btn-success" id="analyzeBtn">🔬 Phân Tích Ngay</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loading -->
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Đang phân tích slides...</p>
+        </div>
+
+        <!-- Results Section -->
+        <section class="results-section" id="resultsSection" style="display: none;">
+            <!-- Summary Cards -->
+            <div class="summary-cards">
+                <div class="card card-highlight">
+                    <div class="card-icon">⭐</div>
+                    <div class="card-content">
+                        <h3 id="averageScore">0.00</h3>
+                        <p>Điểm TB / 10.00</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">📄</div>
+                    <div class="card-content">
+                        <h3 id="totalSlides">0</h3>
+                        <p>Tổng số slides</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon error">❌</div>
+                    <div class="card-content">
+                        <h3 id="totalErrors">0</h3>
+                        <p>Text Overlaps</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon warning">⚠️</div>
+                    <div class="card-content">
+                        <h3 id="containerOverflows">0</h3>
+                        <p>Container Overflows</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🖥️</div>
+                    <div class="card-content">
+                        <h3 id="viewportOverflows">0</h3>
+                        <p>Viewport Overflows</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-container" style="grid-column: 1 / -1;">
+                    <h3>📊 Số lượng lỗi theo loại (Click vào cột để xem chi tiết)</h3>
+                    <canvas id="errorTypeChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Error Details Modal -->
+            <div class="error-details-modal" id="errorDetailsModal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="modalTitle">Chi tiết lỗi</h3>
+                        <button class="btn-close" id="closeModal">✕</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="errorSlideList" class="slide-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide Preview Modal -->
+            <div class="slide-preview-modal" id="slidePreviewModal" style="display: none;">
+                <div class="modal-content-large">
+                    <div class="modal-header">
+                        <h3 id="slidePreviewTitle">Preview Slide</h3>
+                        <button class="btn-close" id="closeSlidePreview">✕</button>
+                    </div>
+                    <div class="modal-body-slide">
+                        <iframe id="slidePreviewFrame"></iframe>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Errors Table -->
+            <div class="errors-table">
+                <div class="table-header">
+                    <h3>Chi tiết lỗi</h3>
+                    <div class="table-controls">
+                        <select id="filterSeverity">
+                            <option value="all">Tất cả mức độ</option>
+                            <option value="error">Lỗi</option>
+                            <option value="warning">Cảnh báo</option>
+                            <option value="info">Thông tin</option>
+                        </select>
+                        <input type="text" id="searchError" placeholder="Tìm kiếm...">
+                        <button class="btn btn-small" id="exportBtn">📥 Xuất CSV</button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="errorsTable">
+                        <thead>
+                            <tr>
+                                <th>Slide</th>
+                                <th>Điểm</th>
+                                <th>Loại lỗi</th>
+                                <th>Overlap %</th>
+                                <th>Element 1</th>
+                                <th>Element 2</th>
+                                <th>Chi tiết</th>
+                            </tr>
+                        </thead>
+                        <tbody id="errorsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="newAnalysisBtn">🔄 Phân tích mới</button>
+                <button class="btn btn-secondary" id="downloadReportBtn">📊 Tải báo cáo</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="analyzer.js"></script>
+</body>
+</html>
